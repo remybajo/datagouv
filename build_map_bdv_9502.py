@@ -252,12 +252,14 @@ def build_bdv_table(dfs, eu_detail):
 # proportionnel par bloc, chaque BdV évolue selon sa proportion 2024.
 SCENARIO_CIBLES = {
     'sursaut': {
-        'centre_lr': +12.0,   # ENS+LR remonte fort (sursaut républicain)
+        # Calibration v4.1 (mai 2026) : respecter les plafonds historiques.
+        # Cible centre+LR : +6 (au lieu de +12) — limite ENS à ~34.5% (sous pic REM 2017 = 35.5%)
+        'centre_lr': +6.0,
         'nfp':       -2.5,    # NFP perd un peu (vote utile centre)
         'rn':        -6.0,    # RN baisse modérément (socle préservé)
     },
     'effondrement': {
-        'centre_lr': -12.0,   # Centre+LR s'effondre
+        'centre_lr': -12.0,   # Centre+LR s'effondre (continuation tendance 22→24)
         'nfp':       +4.0,    # NFP gagne 34% de l'érosion centre (ratio historique)
         'rn':        +7.0,    # RN gagne 64% de l'érosion centre (ratio historique)
     },
