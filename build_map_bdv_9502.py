@@ -241,7 +241,28 @@ def build_bdv_table(dfs, eu_detail):
 # (un BdV où le centre est allé vers le RN continue ainsi ; un BdV
 # où le centre est allé vers le NFP fait pareil).
 
-SCENARIO_CIBLE_PTS = 12.0  # Δ centre+LR cible en moy. circo (signe selon scénario)
+# ─── Paramètres scénarios (modèle v4) ────────────────────────────────────────
+# Cibles politiques par bloc et par scénario (Δ en pts sur la moy. circo).
+# Calibrées sur les ratios historiques observés 2017→2024 sur la 9502
+# (centre+LR perdu : 64% vers RN, 34% vers NFP, 2% vers abst).
+#
+# Refonte v4 (mai 2026) : abandonne le multiplier×Δ_locale (v3) qui produisait
+# des résultats absurdes pour NFP/RN dans les BdV au profil atypique
+# (ex : NFP qui baisse en effondrement). Nouveau modèle : scaling uniforme
+# proportionnel par bloc, chaque BdV évolue selon sa proportion 2024.
+SCENARIO_CIBLES = {
+    'sursaut': {
+        'centre_lr': +12.0,   # ENS+LR remonte fort (sursaut républicain)
+        'nfp':       -2.5,    # NFP perd un peu (vote utile centre)
+        'rn':        -6.0,    # RN baisse modérément (socle préservé)
+    },
+    'effondrement': {
+        'centre_lr': -12.0,   # Centre+LR s'effondre
+        'nfp':       +4.0,    # NFP gagne 34% de l'érosion centre (ratio historique)
+        'rn':        +7.0,    # RN gagne 64% de l'érosion centre (ratio historique)
+    },
+}
+
 CEILING_RN  = 60.0         # plafond physique
 CEILING_NFP = 80.0
 CEILING_CTR = 60.0
@@ -256,85 +277,96 @@ LR_RETENTION_SURSAUT = 0.5  # LR conserve 50% de son score 2024, le reste va à 
 
 def compute_scenario_params(bdv_table, direction):
     """
-    Calcule les deux paramètres d'un scénario (v3) :
-    - K       : multiplicateur appliqué aux Δ_22_24 RN/NFP par BdV (capture
-                la dynamique locale du transfert vers RN ou NFP)
-    - scaling : facteur appliqué uniformément au bloc ENS+LR par BdV (trajectoire
-                imposée du centre+LR, ne dépend pas de la dynamique locale)
-    direction : 'effondrement' (cible -12 pts centre+LR) ou 'sursaut' (+12 pts)
+    Calcule les scalings uniformes par bloc pour un scénario (modèle v4).
+    direction : 'sursaut' ou 'effondrement'
 
-    Sépare deux logiques :
-    - Centre+LR suit une trajectoire imposée (le scénario décrit la chute/remontée globale)
-    - NFP/RN suivent leur dynamique locale amplifiée par K (le profil de chaque BdV
-      détermine si le transfert va plus vers RN ou plus vers NFP)
+    Pour chaque bloc (centre+LR, NFP, RN) :
+        scaling_b = (mean_circo_b + cible_b) / mean_circo_b
+
+    Chaque BdV verra son score scalé du même facteur pour ce bloc :
+        score_27_bdv_b = score_24_bdv_b × scaling_b
+
+    Le scaling uniforme préserve les profils géographiques (un BdV à 50% NFP
+    reste relativement plus à gauche qu'un BdV à 25%), sans amplification
+    artificielle des dynamiques locales 22→24 (qui produisaient des résultats
+    incohérents en v3 pour les BdV atypiques).
+
+    Renvoie un dict : {'centre_lr', 'nfp', 'rn'} → scaling factor
+    Et conserve une clé 'K' = 0 pour rétrocompatibilité (utilisé par v3, plus
+    nécessaire mais évite de casser les autres appels).
     """
-    cible = -SCENARIO_CIBLE_PTS if direction == 'effondrement' else +SCENARIO_CIBLE_PTS
+    cibles = SCENARIO_CIBLES[direction]
 
-    # K pour NFP/RN : amplification de la dynamique locale 22→24
-    delta_centre_22_24 = (bdv_table['ens'] + bdv_table['lr']
-                          - bdv_table['l22t1_ctr'].fillna(bdv_table['ens'])
-                          - bdv_table['l22t1_rgt'].fillna(bdv_table['lr']))
-    mean_observed = delta_centre_22_24.mean()
-    K = cible / mean_observed if abs(mean_observed) > 0.1 else 0.0
+    means = {
+        'centre_lr': (bdv_table['ens'] + bdv_table['lr']).mean(),
+        'nfp':       bdv_table['nfp'].mean(),
+        'rn':        bdv_table['rn'].mean(),
+    }
 
-    # scaling pour ENS+LR : trajectoire uniforme proportionnelle
-    centre_lr_circo = (bdv_table['ens'] + bdv_table['lr']).mean()
-    scaling = (centre_lr_circo + cible) / centre_lr_circo if centre_lr_circo > 0.1 else 1.0
+    scalings = {}
+    for bloc in ('centre_lr', 'nfp', 'rn'):
+        m = means[bloc]
+        scalings[bloc] = (m + cibles[bloc]) / m if m > 0.1 else 1.0
 
-    return K, scaling
+    return scalings
 
 
-# Alias rétrocompatibilité (renvoie seulement K)
+# Alias rétrocompatibilité (compute_scenario_multiplier renvoyait (K, scaling))
 def compute_scenario_multiplier(bdv_table, direction):
-    K, _ = compute_scenario_params(bdv_table, direction)
-    return K
+    return 0.0  # v3 K plus utilisé
 
 
-def apply_scenario_dynamique(row, K, scaling=None):
+def apply_scenario_dynamique(row, scalings, _legacy=None):
     """
-    Projette un BdV en 2027 (modèle v3) :
-    - ENS+LR suit une trajectoire UNIFORME (scaling) : centre+LR scalé du même facteur
-      pour tous les BdV. Ne dépend PAS de la dynamique locale 22→24.
-    - NFP et RN suivent leur DYNAMIQUE LOCALE ×K (capture le profil urbain/périurbain).
+    Projette un BdV en 2027 (modèle v4) :
+    Pour chaque bloc (centre+LR, NFP, RN), application d'un scaling uniforme :
+        score_27_bdv_b = score_24_bdv_b × scaling_b
 
-    Asymétrie ENS/LR (Option C) :
-    - SURSAUT (K<0, scaling>1) : LR conserve LR_RETENTION_SURSAUT (50%) ; ENS récupère
-      le reste de la croissance (Philippe absorbe LR).
-    - EFFONDREMENT (K>0, scaling<1) : ENS et LR baissent proportionnellement à leur
-      poids 2024.
+    Le scaling est calibré sur les cibles politiques circo (SCENARIO_CIBLES) :
+    - Sursaut Philippe  : centre+LR +12 pts, NFP -2.5 pts, RN -6 pts
+    - Effondrement      : centre+LR -12 pts, NFP +4 pts (récup 34% du centre),
+                          RN +7 pts (récup 64% du centre)
+
+    Asymétrie ENS/LR (Option C, conservée) :
+    - SURSAUT : LR conserve 50% (LR_RETENTION_SURSAUT) ; ENS récupère le reste
+                de la cible centre+LR (Philippe absorbe LR).
+    - EFFONDREMENT : ENS et LR baissent proportionnellement à leur poids 2024.
 
     Retourne (nfp_27, ens_27, lr_27, rn_27).
 
-    scaling=None ou 1.0 et K=0 → renvoie T1 2024 inchangé (référence).
+    Le 3e paramètre `_legacy` existe pour rétrocompatibilité avec l'ancienne
+    signature `apply_scenario_dynamique(row, K, scaling)` — ignoré.
+
+    Si scalings est None ou {} → renvoie T1 2024 inchangé (référence).
     """
-    if K == 0 or scaling is None or abs(scaling - 1.0) < 0.001:
+    if not scalings:
         return row['nfp'], row['ens'], row['lr'], row['rn']
 
-    # Δ observés 22→24 (fallback : valeurs 24 si données 22 manquantes)
-    d_rn  = row['rn']  - (row['l22t1_far']  if row.get('l22t1_far')  else row['rn'])
-    d_nfp = row['nfp'] - (row['l22t1_left'] if row.get('l22t1_left') else row['nfp'])
+    sc_centre = scalings['centre_lr']
+    sc_nfp    = scalings['nfp']
+    sc_rn     = scalings['rn']
 
-    # Trajectoire ENS+LR : uniforme par scaling
+    # Bloc ENS+LR : scaling uniforme + asymétrie ENS/LR
     centre_lr_24 = row['ens'] + row['lr']
-    centre_lr_27 = centre_lr_24 * scaling
+    centre_lr_27 = centre_lr_24 * sc_centre
 
-    if scaling > 1.0:
-        # SURSAUT : LR résiduel, ENS absorbe le reste
+    if sc_centre > 1.0:
+        # SURSAUT Philippe : LR résiduel, ENS absorbe
         lr = row['lr'] * LR_RETENTION_SURSAUT
         ens = max(0.0, centre_lr_27 - lr)
-    else:
+    elif sc_centre < 1.0:
         # EFFONDREMENT : partage proportionnel selon poids 2024
         if centre_lr_24 < 0.01:
             ens, lr = row['ens'], row['lr']
         else:
-            ens_share = row['ens'] / centre_lr_24
-            lr_share  = row['lr']  / centre_lr_24
-            ens = centre_lr_27 * ens_share
-            lr  = centre_lr_27 * lr_share
+            ens = centre_lr_27 * (row['ens'] / centre_lr_24)
+            lr  = centre_lr_27 * (row['lr']  / centre_lr_24)
+    else:
+        ens, lr = row['ens'], row['lr']
 
-    # NFP et RN : dynamique locale ×K
-    nfp = row['nfp'] + d_nfp * K
-    rn  = row['rn']  + d_rn  * K
+    # NFP et RN : scaling uniforme proportionnel
+    nfp = row['nfp'] * sc_nfp
+    rn  = row['rn']  * sc_rn
 
     # Bornes physiques
     ens = max(0.0, min(CEILING_CTR, ens))
@@ -657,8 +689,8 @@ def compute_circo_aggregates(bdv_table, params):
     # 4 scénarios prospectifs
     for scen, key in [('sur_union','sur'), ('sur_desunion','sur'),
                        ('eff_union','eff'), ('eff_desunion','eff')]:
-        K, sc = params[key]
-        proj = bdv_table.apply(lambda r: apply_scenario_dynamique(r, K, sc),
+        scalings = params[key]
+        proj = bdv_table.apply(lambda r: apply_scenario_dynamique(r, scalings),
                                axis=1, result_type='expand')
         proj.columns = ['nfp','ens','lr','rn']
 
@@ -754,8 +786,8 @@ def compute_scenario_color(row, scen_code, params):
     if scen_code == 't1':
         return dominant_color(float(row['nfp']), float(row['ens']),
                               float(row['lr']),  float(row['rn']))
-    K, scaling = params['eff'] if scen_code.startswith('eff') else params['sur']
-    nfp, ens, lr, rn = apply_scenario_dynamique(row, K, scaling)
+    scalings = params['eff'] if scen_code.startswith('eff') else params['sur']
+    nfp, ens, lr, rn = apply_scenario_dynamique(row, scalings)
     # ATTENTION : 'desunion'.endswith('union') == True en Python.
     # Toujours tester endswith('desunion') ou == '_desunion' explicitement.
     if scen_code.endswith('desunion'):
@@ -796,8 +828,8 @@ def make_bdv_tooltip_for_scenario(row, scen_code, params):
         bars = (_party_bar('NFP', row['nfp']) + _party_bar('ENS', row['ens'])
               + _party_bar('LR',  row['lr'])  + _party_bar('RN',  row['rn']))
     else:
-        K, sc = params['eff'] if scen_code.startswith('eff') else params['sur']
-        nfp, ens, lr, rn = apply_scenario_dynamique(row, K, sc)
+        scalings = params['eff'] if scen_code.startswith('eff') else params['sur']
+        nfp, ens, lr, rn = apply_scenario_dynamique(row, scalings)
         scen_label = {
             'sur_union':    'Dynamique Philippe + Union NFP',
             'sur_desunion': 'Dynamique Philippe + Désunion',
@@ -924,12 +956,14 @@ def build_map(bdv_table, centroids, contours_communes_gj, contours_bv_gj):
         positions.update(jitter_positions(com, bdvs, centroids))
 
     # Calibrer les paramètres scénarios depuis la dynamique observée (modèle v3)
-    K_eff, sc_eff = compute_scenario_params(bdv_table, 'effondrement')
-    K_sur, sc_sur = compute_scenario_params(bdv_table, 'sursaut')
-    params = {'eff': (K_eff, sc_eff), 'sur': (K_sur, sc_sur)}
-    print(f"    Paramètres scénarios :")
-    print(f"      Effondrement : K_RN/NFP={K_eff:+.2f} | scaling_centre+LR={sc_eff:.3f}")
-    print(f"      Sursaut      : K_RN/NFP={K_sur:+.2f} | scaling_centre+LR={sc_sur:.3f}")
+    scalings_eff = compute_scenario_params(bdv_table, 'effondrement')
+    scalings_sur = compute_scenario_params(bdv_table, 'sursaut')
+    params = {'eff': scalings_eff, 'sur': scalings_sur}
+    print(f"    Paramètres scénarios (v4 — scaling uniforme par bloc) :")
+    print(f"      Effondrement : centre+LR ×{scalings_eff['centre_lr']:.3f} | "
+          f"NFP ×{scalings_eff['nfp']:.3f} | RN ×{scalings_eff['rn']:.3f}")
+    print(f"      Sursaut      : centre+LR ×{scalings_sur['centre_lr']:.3f} | "
+          f"NFP ×{scalings_sur['nfp']:.3f} | RN ×{scalings_sur['rn']:.3f}")
 
     # 5 couches : référence + 4 scénarios prospectifs
     layers = {
@@ -952,8 +986,8 @@ def build_map(bdv_table, centroids, contours_communes_gj, contours_bv_gj):
         """Pour scénarios désunion : retourne True si PS+G est sous le seuil 19.14%."""
         if not scen_code.endswith('desunion'):
             return False
-        K, sc = params['eff'] if scen_code.startswith('eff') else params['sur']
-        nfp_proj, _, _, _ = apply_scenario_dynamique(row, K, sc)
+        scalings = params['eff'] if scen_code.startswith('eff') else params['sur']
+        nfp_proj, _, _, _ = apply_scenario_dynamique(row, scalings)
         _, psg = apply_desunion(nfp_proj, row['lfi_ratio'], row['psg_ratio'])
         return psg < SEUIL
 

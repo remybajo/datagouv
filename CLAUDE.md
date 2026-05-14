@@ -67,15 +67,16 @@ far  = {RN, REC, EXD, UXD, DSV, LRN, LREC, LEXD}
 - Cergy (95127) éclatée entre 9502 (11 BdV) et 9510 (24 BdV) — voir EDR-017
 
 **Décisions figées :**
-- Scénarios 2027 : matrice 2×2 + référence (voir EDR-020)
+- Scénarios 2027 : matrice 2×2 + référence (voir EDR-020 + EDR-022)
   - Référence : T1 2024 (réel)
-  - **Sursaut Philippe** (+12 pts ENS+LR) × **Union NFP** ou **Désunion gauche**
-  - **Effondrement** (-12 pts ENS+LR) × **Union NFP** ou **Désunion gauche**
-- Mécanique modèle v3 :
-  - ENS+LR : trajectoire uniforme par scaling = `(centre_lr_circo ± 12) / centre_lr_circo`
+  - **Dynamique Philippe** (+12 ENS+LR, -2.5 NFP, -6 RN) × **Union** ou **Désunion**
+  - **Effondrement centre** (-12 ENS+LR, +4 NFP, +7 RN) × **Union** ou **Désunion**
+- Mécanique modèle v4 (cibles politiques par bloc + scaling uniforme) :
+  - Pour chaque bloc b ∈ {centre+LR, NFP, RN} : `scaling_b = (mean_circo_b + cible_b) / mean_circo_b`
+  - Projection BdV : `score_27_bdv_b = score_24_bdv_b × scaling_b` (préserve géographie)
   - Asymétrie ENS/LR : sursaut → LR garde 50%, ENS absorbe ; effondrement → partage proportionnel
-  - NFP + RN : dynamique LOCALE 22→24 ×K (K ≈ ±2.24 pour la 9502)
   - Désunion : split NFP via `lfi_ratio = eu_lfi / (eu_lfi + eu_lug + eu_vec + eu_com)` au BdV
-  - Paramètres : `SCENARIO_CIBLE_PTS = 12.0`, `LR_RETENTION_SURSAUT = 0.5`
+  - Paramètres : `SCENARIO_CIBLES` (dict par bloc), `LR_RETENTION_SURSAUT = 0.5`
+  - Cibles calibrées sur les ratios historiques 2017→2024 (centre érodé : 64% RN, 34% NFP)
 - Un script = une responsabilité (data download ≠ model ≠ map)
 - Pas de tests automatisés — validation manuelle contre chiffres officiels via `data-validator`

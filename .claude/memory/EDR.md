@@ -607,6 +607,9 @@ ID : EDR-020
 Date : 2026-05-14
 Titre : Refonte des scénarios — matrice 2×2 (Sursaut Philippe / Effondrement × Union / Désunion)
 ⚠ DÉPRÉCIE EDR-009 (scénarios A1/A2/C par delta RN uniforme)
+⚠ MÉCANIQUE INTERNE (v3) DÉPRÉCIÉE PAR EDR-022 — la structure matrice 2×2 reste valable,
+   mais la mécanique de projection (multiplier ×K sur dynamique 22→24 NFP/RN) est remplacée
+   par un scaling uniforme par bloc avec cibles politiques explicites.
 
 Contexte
 Les scénarios initiaux (EDR-009) reposaient sur des hypothèses uniformes "RN +X pts en moyenne
@@ -740,3 +743,96 @@ Conséquences
 (+) Source officielle Etalab/INSEE — pas d'interprétation tierce
 (-) Cache de 676 Mo à conserver (ne pas le supprimer du `data/_cache_`)
 (-) Le REU est de 2022 → les redécoupages post-2022 ne sont pas reflétés
+
+---
+
+ID : EDR-022
+Date : 2026-05-14
+Titre : Refonte modèle scénarios v4 — cibles politiques par bloc + scaling uniforme
+⚠ DÉPRÉCIE la mécanique v3 d'EDR-020 (multiplier ×K sur la dynamique 22→24 NFP/RN)
+
+Contexte
+Le modèle v3 (EDR-020) imposait une trajectoire uniforme au centre+LR mais amplifiait la
+dynamique locale 22→24 pour NFP et RN via un multiplier ×K. Cette mécanique produisait
+deux résultats politiquement incohérents pour la circ 9502 :
+
+1. **Gauche qui baisse en effondrement** : Δ_nfp_22_24 moyen circo = -0.8 pts (NFP a
+   légèrement reculé). En effondrement (K=+2.24), projection = 35 - 1.8 = 33.2%. Absurde :
+   si le centre s'effondre, ses voix devraient se redistribuer en partie au NFP (ratios
+   historiques 2017→2024 : 34% du centre absorbé par la gauche).
+
+2. **RN trop bas en sursaut Philippe** : Δ_rn_22_24 = +6.3. En sursaut (K=-2.24), projection
+   = 31 - 14.1 = 16.9%. Irréaliste : un sursaut républicain Philippe ne peut pas ramener
+   le RN à son niveau 2017 (13%). Le RN a un socle structurel.
+
+Problème
+Comment modéliser les scénarios 2027 de manière à (a) imposer des trajectoires politiques
+défendables pour CHAQUE bloc, (b) conserver l'hétérogénéité géographique (urbain pop /
+périurbain RN / bourgeoisie), (c) éviter les artefacts de l'amplification ×K ?
+
+Décision
+Adopter un modèle v4 où CHAQUE bloc (centre+LR, NFP, RN) suit une trajectoire imposée par
+scaling uniforme proportionnel. Les cibles politiques par bloc sont calibrées sur les ratios
+historiques 2017→2024 :
+
+  Cibles Sursaut Philippe (mobilisation centre, RN reflue) :
+    centre+LR  : +12 pts (sursaut républicain)
+    NFP        : -2.5 pts (vote utile centre)
+    RN         : -6 pts (socle préservé, baisse modérée)
+
+  Cibles Effondrement (centre s'effondre, RN absorbe massivement) :
+    centre+LR  : -12 pts (continuation accélérée 22→24)
+    NFP        : +4 pts (récupère 34% du centre — ratio historique 9502)
+    RN         : +7 pts (récupère 64% du centre — ratio historique 9502)
+
+Mécanique :
+  Pour chaque BdV i et chaque bloc b :
+    scaling_b = (mean_circo_b + cible_b) / mean_circo_b
+    score_27_bdv_b = score_24_bdv_b × scaling_b
+
+  Scalings calibrés sur la 9502 :
+    Sursaut      : centre+LR ×1.383 | NFP ×0.929 | RN ×0.806
+    Effondrement : centre+LR ×0.617 | NFP ×1.114 | RN ×1.226
+
+Asymétrie ENS/LR (Option C) conservée :
+  - Sursaut : LR conserve 50% (Philippe absorbe), ENS récupère le reste
+  - Effondrement : partage proportionnel ENS/LR selon poids 2024
+
+Hétérogénéité géographique préservée par le scaling proportionnel :
+  - Un BdV à 67% NFP (Cergy 24) projeté à 67×1.114=74% en effondrement (cap à 80)
+  - Un BdV à 25% NFP (Asnières 1) projeté à 25×1.114=28% en effondrement
+  → Les profils urbain pop / périurbain restent visibles, mais sans amplification artificielle
+
+Désunion (axe orthogonal) : split NFP par BdV via ratio Euro 2024 (inchangé EDR-011).
+
+Paramètres figés :
+  SCENARIO_CIBLES['sursaut']      = {'centre_lr': +12, 'nfp': -2.5, 'rn': -6}
+  SCENARIO_CIBLES['effondrement'] = {'centre_lr': -12, 'nfp':  +4,  'rn': +7}
+  LR_RETENTION_SURSAUT = 0.5
+
+Alternatives rejetées
+- Garder v3 avec multiplier×K : reproduisait les bugs politiques signalés
+- Modèle hybride scaling+K (poids 70/30) : ajoute une couche de complexité sans
+  bénéfice clair, et la dynamique 22→24 NFP/RN n'est pas représentative
+- Cibles symétriques (+/- 8 partout) : politiquement incohérent (le RN n'a pas la
+  même volatilité que le centre)
+- Asymétrie ENS/LR option A (LR figé) : trop rigide
+- Asymétrie ENS/LR option B (toujours proportionnelle) : maintient LR à 8-9% en sursaut,
+  alors que l'effet Philippe doit cannibaliser LR
+
+Conséquences
+(+) Les projections respectent les ratios historiques observés (64% RN / 34% NFP du
+   centre érodé sur la 9502)
+(+) RN crédible dans tous les scénarios (25% min en sursaut, pas de retour à 13%)
+(+) NFP gagne quand le centre s'effondre (réalité politique)
+(+) Mécanique simple à expliquer : "chaque bloc suit une cible circo, distribuée par
+   BdV proportionnellement à son score 2024"
+(+) Calibrage entièrement explicite : SCENARIO_CIBLES facile à modifier (avec EDR)
+(-) Plus de modulation par la dynamique 22→24 locale → certains BdV atypiques
+   (ex: Cergy 22 où le RN a baissé 22→24) ne voient pas cette baisse amplifiée
+(-) Effet inattendu sur la désunion : en effondrement, NFP est plus haut donc PSG
+   résiste mieux au seuil (30 BdV sous seuil vs 58 en sursaut+désunion). Le narratif
+   "effondrement+désunion = cauchemar" reste vrai (RN à 38% gagne au T2) mais via un
+   mécanisme différent
+(-) Les cibles -2.5 NFP en sursaut et +4 NFP en effondrement sont des hypothèses
+   politiques arbitraires (calibrées sur les ratios historiques mais à valider)
