@@ -1,0 +1,27 @@
+# Caches lourds (téléchargements MI/data.gouv.fr — > 100 Mo, dépasse limite GitHub)
+# Régénérables via `python3 build_bdv_data.py` et `python3 build_commune_data.py`
+data/_cache_*
+
+# Notes générées automatiquement (régénérables)
+analyse_*.md
+
+# Versions de sauvegarde des scripts
+build_map_bdv_9502_v*.py
+carte_bdv_9502_v*.html
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# macOS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Settings Claude perso (garder .claude/ projet, ignorer settings.local.json)
+.claude/settings.local.json
