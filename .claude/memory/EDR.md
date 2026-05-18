@@ -836,3 +836,59 @@ Conséquences
    mécanisme différent
 (-) Les cibles -2.5 NFP en sursaut et +4 NFP en effondrement sont des hypothèses
    politiques arbitraires (calibrées sur les ratios historiques mais à valider)
+
+---
+
+ID : EDR-023
+Date : 2026-05-15
+Titre : Ratio de transfert du centre érodé révisé — 60% NFP / 35% RN (effondrement)
+⚠ AJUSTE EDR-022 (cibles du scénario effondrement)
+
+Contexte
+Le modèle v4 (EDR-022) calibrait les cibles du scénario "Effondrement centre" sur un
+ratio de transfert 64% RN / 34% NFP, calculé sur la trajectoire 2017→2024 du bloc
+centre+LR agrégé de la circ 9502.
+
+Problème
+Ce ratio agrégé était biaisé. Il mélangeait deux effondrements de nature distincte :
+- LR : -18.1 pts sur 2017→2024, parti massivement au RN (dédiabolisation, ligne Ciotti)
+- ENS/REM : -10.2 pts, érosion bien plus partagée (électorat centre-gauche modéré)
+
+L'effondrement 2017→2024 a été dominé par la chute de LR, ce qui a tiré le ratio
+agrégé vers le RN. Or pour la projection 2024→2027, il ne reste quasiment qu'ENS à
+éroder (LR est déjà au plancher à 6.3%). L'électorat ENS résiduel est sociologiquement
+centre-gauche / social-démocrate : en contexte de bipolarisation NFP/RN, il fait
+majoritairement barrage et revient à gauche.
+
+Décision
+Réviser le ratio de transfert du centre érodé pour le scénario effondrement :
+  Ancien : 64% RN / 34% NFP / 2% abstention
+  Nouveau : 60% NFP / 35% RN / 5% abstention
+
+Nouvelles cibles effondrement (SCENARIO_CIBLES['effondrement']) :
+  centre_lr : -12.0  (inchangé)
+  nfp       : +7.0   (= 12 × 0.60, au lieu de +4.0)
+  rn        : +4.0   (= 12 × 0.35, au lieu de +7.0)
+
+Le scénario "Dynamique Philippe" n'est PAS modifié (le sursaut centre reprend des
+voix au RN et au NFP, logique inchangée).
+
+Alternatives rejetées
+- Garder 64/34 : biais structurel identifié, surestime le report vers le RN
+- 55% NFP / 40% RN (option a) : RN encore un peu trop favorisé selon l'analyse
+  sociologique de l'électorat ENS résiduel
+- 65% NFP / 30% RN (option c) : NFP projeté à 42%+ dépasserait trop largement son
+  record historique (Euro 2024 = 37.1%)
+
+Conséquences
+(+) Le rapport de force en effondrement est inversé : NFP 41.3% > RN 35.2% en moy circo
+(+) Cohérent avec le réflexe barrage observé au T2 2024 (report ENS→NFP ~65%)
+(+) Reflète la nature ENS-dominée de l'érosion future du centre
+(+) T2 effondrement estimé : NFP 57% / RN 43% (au lieu de 54/46 en v4.1)
+(-) Le RN reste 1er dans 44 BdV sur 80 au T1 (concentration géographique périurbaine)
+   malgré un score circo inférieur au NFP — la victoire T1 du NFP est "tassée" sur
+   le cœur urbain
+(-) NFP à 41.3% dépasse son record historique (37.1% Euro 2024) — accepté car un
+   scénario d'effondrement pousse par nature au-delà du passé
+(-) Le ratio 60/35/5 reste une hypothèse politique, non calibrée sur données de report
+   individuelles (indisponibles à l'échelle BdV)

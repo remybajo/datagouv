@@ -259,9 +259,16 @@ SCENARIO_CIBLES = {
         'rn':        -6.0,    # RN baisse modérément (socle préservé)
     },
     'effondrement': {
-        'centre_lr': -12.0,   # Centre+LR s'effondre (continuation tendance 22→24)
-        'nfp':       +4.0,    # NFP gagne 34% de l'érosion centre (ratio historique)
-        'rn':        +7.0,    # RN gagne 64% de l'érosion centre (ratio historique)
+        # Calibration v4.2 (mai 2026) : ratio de transfert du centre érodé révisé.
+        # L'ancien 64% RN / 34% NFP était biaisé : il agrégeait l'effondrement
+        # 2017→2024 de LR (parti massivement au RN) avec celui d'ENS. Or pour
+        # 2024→2027 il ne reste quasiment qu'ENS à éroder, et son électorat
+        # résiduel (centre-gauche, social-démocrate) revient majoritairement
+        # à gauche en contexte de bipolarisation NFP/RN.
+        # Nouveau ratio : 60% NFP / 35% RN / 5% abstention.
+        'centre_lr': -12.0,   # Centre+LR s'effondre
+        'nfp':       +7.0,    # NFP gagne 60% de l'érosion centre (12 × 0.60)
+        'rn':        +4.0,    # RN gagne 35% de l'érosion centre (12 × 0.35)
     },
 }
 
