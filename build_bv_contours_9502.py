@@ -12,10 +12,12 @@ Utilise jq en streaming → mémoire constante même sur 676 Mo.
 """
 import os, subprocess, json, sys
 
-DATA = "/Users/remybajolet/Desktop/datagouv/data"
+from config_circos import DATA, get_active
+
+CFG   = get_active()
+CIRC  = CFG['code_circ']                                  # ex "9502"
 CACHE = os.path.join(DATA, "_cache_bv_contours_france.geojson")
-OUT   = os.path.join(DATA, "bv_contours_9502.geojson")
-CIRC  = "9502"
+OUT   = os.path.join(DATA, f"bv_contours_{CIRC}.geojson")
 
 
 def main():

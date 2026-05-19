@@ -20,6 +20,15 @@ Produit des cartes interactives et notes d'analyse par circonscription à partir
 **Règles d'interaction entre agents :** voir `.claude/contracts.md`
 
 ## 3. HOW
+**Multi-circo (config centralisée) :**
+- `config_circos.py` : un bloc par circo (identité, carte, seuil, cibles scénarios,
+  typologie BdV, références MI). `CIRCO_ACTIVE` désigne la circo traitée.
+- Ajouter une circo = copier le gabarit dans `config_circos.py`, remplir, changer
+  `CIRCO_ACTIVE`, lancer `build_bv_contours_9502.py` puis `build_map_bdv_9502.py`.
+- Travail analytique requis par circo : `scenario_cibles`, `bdv_type_par_commune`,
+  `ref_t1_2024`, `seuil_t2` (pas juste du copier-coller).
+- Autre département : changer aussi `DEP`, régénérer `data/reu_bv_circ_<dep>.csv`.
+
 **Nommage :**
 - Scripts : `build_<niveau>_<scope>.py`
 - Cartes : `carte_<scope>.html` | Notes : `analyse_<scope>.md`

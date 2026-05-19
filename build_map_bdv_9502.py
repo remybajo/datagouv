@@ -16,10 +16,15 @@ import folium
 from folium.plugins import FeatureGroupSubGroup
 warnings.filterwarnings('ignore')
 
-DATA   = "/Users/remybajolet/Desktop/datagouv/data"
-CIRC   = "2"
-DEP    = "95"
-SEUIL  = 19.14   # % exprimés pour se maintenir au 2nd tour
+# ─── Configuration de la circo (centralisée dans config_circos.py) ───────────
+from config_circos import (CIRCOS, CIRCO_ACTIVE, DATA, BASE,
+                            TRANSFER_RATIOS, TRANSFER_DEFAULT, get_active)
+
+CFG    = get_active()
+CIRC   = CFG['code_circ_court']    # ex "2"
+CODE   = CFG['code_circ']          # ex "9502"
+DEP    = CFG['dep']                # ex "95"
+SEUIL  = CFG['seuil_t2']           # % exprimés pour se maintenir au 2nd tour
 
 # ─── Palettes ─────────────────────────────────────────────────────────────────
 def color_gauche(pct):
@@ -250,82 +255,20 @@ def build_bdv_table(dfs, eu_detail):
 # des résultats absurdes pour NFP/RN dans les BdV au profil atypique
 # (ex : NFP qui baisse en effondrement). Nouveau modèle : scaling uniforme
 # proportionnel par bloc, chaque BdV évolue selon sa proportion 2024.
-SCENARIO_CIBLES = {
-    'sursaut': {
-        # Calibration v4.1 (mai 2026) : respecter les plafonds historiques.
-        # Cible centre+LR : +6 (au lieu de +12) — limite ENS à ~34.5% (sous pic REM 2017 = 35.5%)
-        'centre_lr': +6.0,
-        'nfp':       -2.5,    # NFP perd un peu (vote utile centre)
-        'rn':        -6.0,    # RN baisse modérément (socle préservé)
-    },
-    'effondrement': {
-        # Calibration v4.2 (mai 2026) : ratio de transfert du centre érodé révisé.
-        # L'ancien 64% RN / 34% NFP était biaisé : il agrégeait l'effondrement
-        # 2017→2024 de LR (parti massivement au RN) avec celui d'ENS. Or pour
-        # 2024→2027 il ne reste quasiment qu'ENS à éroder, et son électorat
-        # résiduel (centre-gauche, social-démocrate) revient majoritairement
-        # à gauche en contexte de bipolarisation NFP/RN.
-        # Nouveau ratio : 60% NFP / 35% RN / 5% abstention.
-        'centre_lr': -12.0,   # Centre+LR s'effondre
-        'nfp':       +7.0,    # NFP gagne 60% de l'érosion centre (12 × 0.60)
-        'rn':        +4.0,    # RN gagne 35% de l'érosion centre (12 × 0.35)
-    },
-}
+# Cibles scénarios : lues depuis config_circos.py (calibrées par circo).
+SCENARIO_CIBLES = CFG['scenario_cibles']
 
 CEILING_RN  = 60.0         # plafond physique
 CEILING_NFP = 80.0
 CEILING_CTR = 60.0
 CEILING_LR  = 30.0
 
-# Asymétrie ENS/LR (Option C) :
-# En SURSAUT Philippe, Édouard Philippe (marque Horizons) absorbe une partie
-# de l'électorat LR résiduel. LR ne profite pas du sursaut : il continue à
-# baisser. Paramètre : fraction de LR conservée en sursaut.
-LR_RETENTION_SURSAUT = 0.5  # LR conserve 50% de son score 2024, le reste va à ENS
+# Asymétrie ENS/LR (Option C) — fraction de LR conservée en sursaut Philippe.
+LR_RETENTION_SURSAUT = CFG['lr_retention_sursaut']
 
-
-# ─── Typologie des BdV + transferts différenciés (modèle v4.3, EDR-024) ──────
-# En EFFONDREMENT, le centre+LR érodé ne se redistribue PAS uniformément :
-# le profil sociologique du BdV détermine où vont les voix.
-# Classification au niveau commune (les BdV d'une commune partagent le profil).
-# Règle de classement : NFP>45% → urbain populaire ; ENS 1er → bourgeois ;
-# RN≥40% → rural ; sinon → périurbain (mixte urbain = Éragny, cas particulier).
-BDV_TYPE_PAR_COMMUNE = {
-    '95127': 'urbain_populaire',  # Cergy
-    '95572': 'urbain_populaire',  # Saint-Ouen-l'Aumône
-    '95218': 'mixte_urbain',      # Éragny
-    '95313': 'bourgeois',         # L'Isle-Adam (ENS 1er)
-    '95450': 'bourgeois',         # Neuville-sur-Oise (ENS 1er, ville universitaire)
-    '95394': 'periurbain',        # Méry-sur-Oise
-    '95392': 'periurbain',        # Mériel
-    '95480': 'periurbain',        # Parmain
-    '95504': 'periurbain',        # Presles
-    '95430': 'periurbain',        # Montsoult
-    '95042': 'periurbain',        # Baillet-en-France
-    '95445': 'periurbain',        # Nerville-la-Forêt
-    '95026': 'rural',             # Asnières-sur-Oise
-    '95056': 'rural',             # Belloy-en-France
-    '95652': 'rural',             # Viarmes
-    '95456': 'rural',             # Noisy-sur-Oise
-    '95660': 'rural',             # Villaines-sous-Bois
-    '95353': 'rural',             # Maffliers
-    '95594': 'rural',             # Seugy
-    '95678': 'rural',             # Villiers-Adam
-    '95566': 'rural',             # Saint-Martin-du-Tertre
-}
-
-# Ratio de transfert du centre+LR érodé → (NFP, RN, abstention) par type de BdV.
-# Calibré sur l'analyse sociologique (EDR-024) : la bourgeoisie diplômée résiste
-# au RN (barrage), le périurbain pavillonnaire et le rural alimentent le RN.
-TRANSFER_RATIOS = {
-    'urbain_populaire': (0.75, 0.15, 0.10),
-    'mixte_urbain':     (0.60, 0.30, 0.10),
-    'bourgeois':        (0.50, 0.35, 0.15),
-    'periurbain':       (0.40, 0.50, 0.10),
-    'rural':            (0.30, 0.60, 0.10),
-}
-# Fallback si commune non classée (= ancien ratio circo v4.2)
-TRANSFER_DEFAULT = (0.60, 0.35, 0.05)
+# Typologie des BdV (niveau commune) — lue depuis config_circos.py (EDR-024).
+# TRANSFER_RATIOS / TRANSFER_DEFAULT sont importés de config_circos (génériques).
+BDV_TYPE_PAR_COMMUNE = CFG['bdv_type_par_commune']
 
 
 def get_transfer_ratios(row):
@@ -733,7 +676,7 @@ def render_history_panel(history):
         'border:1px solid #ddd">'
         '<div style="font-size:9px;color:#999;text-transform:uppercase;letter-spacing:0.5px;'
         'margin-bottom:4px;position:sticky;top:0;background:white;padding-bottom:2px">'
-        'Historique circo 9502</div>'
+        f'Historique circo {CODE}</div>'
         + ''.join(sections) + '</div>'
     )
 
@@ -841,7 +784,7 @@ def render_aggregate_panel(aggregates, n_bdv):
         'box-shadow:0 2px 12px rgba(0,0,0,.2);font-family:Arial,sans-serif;'
         'min-width:280px;border:1px solid #ddd">'
         '<div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'
-        'Agrégats circo 9502 — moyenne pondérée</div>'
+        f'Agrégats circo {CODE} — moyenne pondérée</div>'
         + ''.join(panels) + '</div>'
     )
 
@@ -994,7 +937,7 @@ def make_bdv_tooltip_for_scenario(row, scen_code, params):
 
 # ─── Carte principale ──────────────────────────────────────────────────────────
 def build_map(bdv_table, centroids, contours_communes_gj, contours_bv_gj):
-    m = folium.Map(location=[49.06, 2.20], zoom_start=12,
+    m = folium.Map(location=CFG['map_center'], zoom_start=CFG['map_zoom'],
                    tiles='CartoDB positron')
 
     # Contours communes en arrière-plan (pas dans le layer control)
@@ -1144,12 +1087,12 @@ def build_map(bdv_table, centroids, contours_communes_gj, contours_bv_gj):
 </div>"""
     m.get_root().html.add_child(folium.Element(legend_html))
 
-    title_html = """
+    title_html = f"""
 <div style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;
      background:white;padding:8px 18px;border-radius:8px;
      box-shadow:0 2px 8px rgba(0,0,0,.25);font-family:Arial,sans-serif;text-align:center">
-<b style="font-size:14px">2e circ. Val-d'Oise — Bureaux de vote</b><br>
-<span style="font-size:11px;color:#555">Ayda Hadizadeh (NFP) | Scénarios 2027</span>
+<b style="font-size:14px">{CFG['nom_court']} — Bureaux de vote</b><br>
+<span style="font-size:11px;color:#555">{CFG['depute']} | Scénarios 2027</span>
 </div>"""
     m.get_root().html.add_child(folium.Element(title_html))
 
@@ -1373,7 +1316,7 @@ def main():
 
     print("Construction du tableau principal...")
     bdv_table = build_bdv_table(dfs, eu_detail)
-    out_table = os.path.join(DATA, 'bdv_9502_scenarios.csv')
+    out_table = os.path.join(DATA, f'bdv_{CODE}_scenarios.csv')
     bdv_table.to_csv(out_table, index=False)
     print(f"  ✓ {len(bdv_table)} BdV → {out_table}")
 
@@ -1386,9 +1329,9 @@ def main():
     print(f"  {len(contours_communes_gj['features'])} contours communes")
 
     print("Chargement des contours BdV (REU)...")
-    bv_path = os.path.join(DATA, 'bv_contours_9502.geojson')
+    bv_path = os.path.join(DATA, f'bv_contours_{CODE}.geojson')
     if not os.path.exists(bv_path):
-        print(f"  ✗ {bv_path} absent — lancer build_bv_contours_9502.py")
+        print(f"  ✗ {bv_path} absent — lancer build_bv_contours.py")
         contours_bv_gj = {'type': 'FeatureCollection', 'features': []}
     else:
         with open(bv_path) as f:
@@ -1397,7 +1340,7 @@ def main():
 
     print("Construction de la carte...")
     m = build_map(bdv_table, centroids, contours_communes_gj, contours_bv_gj)
-    map_path = "/Users/remybajolet/Desktop/datagouv/carte_bdv_9502.html"
+    map_path = os.path.join(BASE, f"carte_bdv_{CODE}.html")
     m.save(map_path)
     print(f"  ✓ Carte → {map_path}")
 
