@@ -284,6 +284,59 @@ CEILING_LR  = 30.0
 LR_RETENTION_SURSAUT = 0.5  # LR conserve 50% de son score 2024, le reste va à ENS
 
 
+# ─── Typologie des BdV + transferts différenciés (modèle v4.3, EDR-024) ──────
+# En EFFONDREMENT, le centre+LR érodé ne se redistribue PAS uniformément :
+# le profil sociologique du BdV détermine où vont les voix.
+# Classification au niveau commune (les BdV d'une commune partagent le profil).
+# Règle de classement : NFP>45% → urbain populaire ; ENS 1er → bourgeois ;
+# RN≥40% → rural ; sinon → périurbain (mixte urbain = Éragny, cas particulier).
+BDV_TYPE_PAR_COMMUNE = {
+    '95127': 'urbain_populaire',  # Cergy
+    '95572': 'urbain_populaire',  # Saint-Ouen-l'Aumône
+    '95218': 'mixte_urbain',      # Éragny
+    '95313': 'bourgeois',         # L'Isle-Adam (ENS 1er)
+    '95450': 'bourgeois',         # Neuville-sur-Oise (ENS 1er, ville universitaire)
+    '95394': 'periurbain',        # Méry-sur-Oise
+    '95392': 'periurbain',        # Mériel
+    '95480': 'periurbain',        # Parmain
+    '95504': 'periurbain',        # Presles
+    '95430': 'periurbain',        # Montsoult
+    '95042': 'periurbain',        # Baillet-en-France
+    '95445': 'periurbain',        # Nerville-la-Forêt
+    '95026': 'rural',             # Asnières-sur-Oise
+    '95056': 'rural',             # Belloy-en-France
+    '95652': 'rural',             # Viarmes
+    '95456': 'rural',             # Noisy-sur-Oise
+    '95660': 'rural',             # Villaines-sous-Bois
+    '95353': 'rural',             # Maffliers
+    '95594': 'rural',             # Seugy
+    '95678': 'rural',             # Villiers-Adam
+    '95566': 'rural',             # Saint-Martin-du-Tertre
+}
+
+# Ratio de transfert du centre+LR érodé → (NFP, RN, abstention) par type de BdV.
+# Calibré sur l'analyse sociologique (EDR-024) : la bourgeoisie diplômée résiste
+# au RN (barrage), le périurbain pavillonnaire et le rural alimentent le RN.
+TRANSFER_RATIOS = {
+    'urbain_populaire': (0.75, 0.15, 0.10),
+    'mixte_urbain':     (0.60, 0.30, 0.10),
+    'bourgeois':        (0.50, 0.35, 0.15),
+    'periurbain':       (0.40, 0.50, 0.10),
+    'rural':            (0.30, 0.60, 0.10),
+}
+# Fallback si commune non classée (= ancien ratio circo v4.2)
+TRANSFER_DEFAULT = (0.60, 0.35, 0.05)
+
+
+def get_transfer_ratios(row):
+    """Retourne (r_nfp, r_rn, r_abst) du centre érodé selon le type du BdV."""
+    code = str(row['code_commune']).split('.')[0].zfill(5)
+    bdv_type = BDV_TYPE_PAR_COMMUNE.get(code)
+    if bdv_type is None:
+        return TRANSFER_DEFAULT
+    return TRANSFER_RATIOS[bdv_type]
+
+
 def compute_scenario_params(bdv_table, direction):
     """
     Calcule les scalings uniformes par bloc pour un scénario (modèle v4).
@@ -352,30 +405,37 @@ def apply_scenario_dynamique(row, scalings, _legacy=None):
         return row['nfp'], row['ens'], row['lr'], row['rn']
 
     sc_centre = scalings['centre_lr']
-    sc_nfp    = scalings['nfp']
-    sc_rn     = scalings['rn']
 
     # Bloc ENS+LR : scaling uniforme + asymétrie ENS/LR
     centre_lr_24 = row['ens'] + row['lr']
     centre_lr_27 = centre_lr_24 * sc_centre
 
     if sc_centre > 1.0:
-        # SURSAUT Philippe : LR résiduel, ENS absorbe
+        # ─── SURSAUT Philippe (modèle v4.2 — scaling uniforme) ───
         lr = row['lr'] * LR_RETENTION_SURSAUT
         ens = max(0.0, centre_lr_27 - lr)
+        nfp = row['nfp'] * scalings['nfp']
+        rn  = row['rn']  * scalings['rn']
+
     elif sc_centre < 1.0:
-        # EFFONDREMENT : partage proportionnel selon poids 2024
+        # ─── EFFONDREMENT (modèle v4.3 — transfert différencié par type) ───
+        # 1. Le centre+LR s'érode proportionnellement (ENS et LR ensemble)
         if centre_lr_24 < 0.01:
             ens, lr = row['ens'], row['lr']
         else:
             ens = centre_lr_27 * (row['ens'] / centre_lr_24)
             lr  = centre_lr_27 * (row['lr']  / centre_lr_24)
+        # 2. Les points perdus par le centre sont redistribués selon le
+        #    type sociologique du BdV (EDR-024) — vrai modèle de transfert
+        erosion = centre_lr_24 - centre_lr_27        # points libérés (>0)
+        r_nfp, r_rn, _r_abst = get_transfer_ratios(row)
+        nfp = row['nfp'] + erosion * r_nfp
+        rn  = row['rn']  + erosion * r_rn
+        # (la part r_abst part vers l'abstention — non suivie comme bloc)
+
     else:
         ens, lr = row['ens'], row['lr']
-
-    # NFP et RN : scaling uniforme proportionnel
-    nfp = row['nfp'] * sc_nfp
-    rn  = row['rn']  * sc_rn
+        nfp, rn = row['nfp'], row['rn']
 
     # Bornes physiques
     ens = max(0.0, min(CEILING_CTR, ens))

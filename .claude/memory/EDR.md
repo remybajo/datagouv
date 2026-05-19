@@ -892,3 +892,87 @@ Conséquences
    scénario d'effondrement pousse par nature au-delà du passé
 (-) Le ratio 60/35/5 reste une hypothèse politique, non calibrée sur données de report
    individuelles (indisponibles à l'échelle BdV)
+
+---
+
+ID : EDR-024
+Date : 2026-05-19
+Titre : Transferts du centre érodé différenciés par type sociologique de BdV
+⚠ RAFFINE EDR-023 (ratio de transfert effondrement, jusqu'ici uniforme 60/35/5)
+
+Contexte
+Le modèle v4.2 (EDR-023) appliquait un ratio de transfert uniforme (60% NFP / 35% RN /
+5% abstention) à TOUS les BdV en scénario effondrement. Or l'électorat du centre n'a pas
+le même comportement de report selon le profil sociologique du BdV.
+
+Problème
+Un ratio uniforme suppose qu'un BdV bourgeois de L'Isle-Adam et un BdV de la ZAC de Cergy
+redistribuent leur centre érodé de la même façon. C'est faux :
+- Zone urbaine populaire : le centre (faible) érodé va massivement à gauche
+- Zone bourgeoise diplômée : barrage au RN (effet diplôme), report partagé
+- Zone périurbaine pavillonnaire : cœur de la dynamique RN, report équilibré→RN
+- Zone rurale : bastion RN déjà installé, report nettement RN
+
+Décision
+Introduire une typologie des BdV en 5 catégories et un ratio de transfert spécifique
+à chaque type, appliqué uniquement au scénario EFFONDREMENT (le scénario Sursaut Philippe
+reste en scaling uniforme v4.2).
+
+Typologie (au niveau commune — les BdV d'une commune partagent le profil) :
+  Règle de classement :
+    NFP > 45%        → urbain_populaire
+    ENS 1ère force   → bourgeois
+    RN ≥ 40%         → rural
+    Éragny           → mixte_urbain (cas particulier, mixte urbain)
+    sinon            → periurbain
+
+Ratios de transfert du centre+LR érodé → (NFP, RN, abstention) :
+  urbain_populaire : 75% / 15% / 10%
+  mixte_urbain     : 60% / 30% / 10%
+  bourgeois        : 50% / 35% / 15%
+  periurbain       : 40% / 50% / 10%
+  rural            : 30% / 60% / 10%
+
+Mécanique (modèle v4.3, scénario effondrement) :
+  Pour chaque BdV i :
+    1. centre_lr_27 = centre_lr_24 × scaling  (scaling -12 pts, uniforme — inchangé)
+    2. erosion_i = centre_lr_24 - centre_lr_27   (points libérés)
+    3. (r_nfp, r_rn, r_abst) = ratio du type du BdV
+    4. nfp_27 = nfp_24 + erosion_i × r_nfp
+       rn_27  = rn_24  + erosion_i × r_rn
+  → vrai modèle de transfert (conservation de masse centre → NFP+RN+abstention)
+
+Répartition des 80 BdV : 23 urbain populaire, 23 périurbain, 14 rural, 10 mixte, 10 bourgeois.
+
+Justification sociologique
+L'effet le mieux documenté de la sociologie électorale française est le clivage du
+diplôme : les diplômés du supérieur résistent fortement au RN. Les zones bourgeoises
+(L'Isle-Adam centre, Neuville-sur-Oise) concentrent cet électorat ; leur centre érodé
+fait barrage plutôt que de basculer RN. À l'inverse, le périurbain pavillonnaire
+(classes moyennes propriétaires) et le rural sont le réservoir RN : le centre y bascule
+majoritairement RN.
+
+Alternatives rejetées
+- Ratio uniforme 60/35 (EDR-023) : ne reflète pas l'hétérogénéité sociologique
+- Données INSEE par BdV : la maille INSEE est l'IRIS, pas le BdV (appariement
+  approximatif) ; introduirait une source tierce contraire à EDR-002. La typologie
+  dérivée du vote 2024 lui-même suffit et ne viole aucune règle.
+- Classer "bourgeois" comme RN-favorable : rejeté après analyse — confondait la
+  bourgeoisie économique ex-LR (RN-compatible) avec la bourgeoisie diplômée ex-Macron
+  (barrage anti-RN). Ce qui reste à éroder en 2027 est surtout ENS (diplômés).
+
+Conséquences
+(+) Le transfert reflète la réalité sociologique terrain
+(+) Le périurbain et le rural sont identifiés comme les seuls types réellement
+   RN-favorables — utile pour le ciblage de campagne
+(+) Aucune donnée externe : typologie dérivée du vote 2024, conforme à EDR-002
+(=) Agrégat circo effondrement : NFP 40.6% / RN 35.8% (proche de v4.2 : 41.3/35.2)
+(=) T2 effondrement estimé : NFP 56.6% / RN 43.4%
+(-) Le ratio de transfert effectif circo (pondéré par l'érosion) est 51% NFP / 38% RN,
+   et non 60/35 : les zones à fort centre (bourgeois, périurbain) pèsent plus dans
+   l'érosion absolue et tirent la moyenne vers le RN. C'est l'effet recherché mais il
+   faut le garder en tête en lisant les agrégats.
+- (-) Typologie au niveau commune : un BdV atypique dans une commune (ex : un quartier
+   populaire dans une commune bourgeoise) reçoit le ratio de sa commune, pas le sien.
+- (-) Le scénario Sursaut Philippe n'a PAS de transfert différencié (resté en scaling
+   uniforme) — asymétrie de traitement entre les deux scénarios, assumée.

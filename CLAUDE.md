@@ -71,12 +71,16 @@ far  = {RN, REC, EXD, UXD, DSV, LRN, LREC, LEXD}
   - Référence : T1 2024 (réel)
   - **Dynamique Philippe** (+12 ENS+LR, -2.5 NFP, -6 RN) × **Union** ou **Désunion**
   - **Effondrement centre** (-12 ENS+LR, +4 NFP, +7 RN) × **Union** ou **Désunion**
-- Mécanique modèle v4 (cibles politiques par bloc + scaling uniforme) :
-  - Pour chaque bloc b ∈ {centre+LR, NFP, RN} : `scaling_b = (mean_circo_b + cible_b) / mean_circo_b`
-  - Projection BdV : `score_27_bdv_b = score_24_bdv_b × scaling_b` (préserve géographie)
+- Mécanique modèle v4.3 (voir EDR-022/023/024) :
+  - **Sursaut Philippe** : scaling uniforme par bloc, `scaling_b = (mean_circo_b + cible_b) / mean_circo_b`
+  - **Effondrement** : modèle de transfert — le centre+LR érodé est redistribué BdV par BdV
+    selon le type sociologique (EDR-024) :
+    - `erosion_i = centre_lr_24 − centre_lr_24 × scaling` puis `nfp += erosion×r_nfp`, `rn += erosion×r_rn`
+    - Typologie 5 types : urbain_populaire / mixte_urbain / bourgeois / periurbain / rural
+    - Ratios transfert (NFP/RN/abst) : 75/15/10 · 60/30/10 · 50/35/15 · 40/50/10 · 30/60/10
+    - Typologie au niveau commune dans `BDV_TYPE_PAR_COMMUNE`
   - Asymétrie ENS/LR : sursaut → LR garde 50%, ENS absorbe ; effondrement → partage proportionnel
   - Désunion : split NFP via `lfi_ratio = eu_lfi / (eu_lfi + eu_lug + eu_vec + eu_com)` au BdV
-  - Paramètres : `SCENARIO_CIBLES` (dict par bloc), `LR_RETENTION_SURSAUT = 0.5`
-  - Cibles calibrées sur les ratios historiques 2017→2024 (centre érodé : 64% RN, 34% NFP)
+  - Paramètres : `SCENARIO_CIBLES`, `TRANSFER_RATIOS`, `BDV_TYPE_PAR_COMMUNE`, `LR_RETENTION_SURSAUT = 0.5`
 - Un script = une responsabilité (data download ≠ model ≠ map)
 - Pas de tests automatisés — validation manuelle contre chiffres officiels via `data-validator`
