@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """
 Modèle prédictif : bascule à gauche sous scénario "gauche unie + effondrement centre/droite"
@@ -9,9 +10,10 @@ import pandas as pd
 import numpy as np
 import folium
 from folium.plugins import MarkerCluster
+_PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 warnings.filterwarnings('ignore')
-DATA = "/Users/remybajolet/Desktop/datagouv/data"
+DATA = os.path.join(_PROJ, "data")
 
 # ─── Bloc definitions ─────────────────────────────────────────────────────────
 
@@ -638,7 +640,7 @@ def build_map(master):
 
     folium.LayerControl(collapsed=False, position='topright').add_to(m)
 
-    out = "/Users/remybajolet/Desktop/datagouv/carte_predictive.html"
+    out = os.path.join(_PROJ, "carte_predictive.html")
     m.save(out)
     print(f"\n✓ Carte prédictive : {out}")
     return out
@@ -656,5 +658,5 @@ def _blue_scale(pct):
 if __name__ == '__main__':
     master = build_prediction()
     build_map(master)
-    master.to_csv("/Users/remybajolet/Desktop/datagouv/data/master_electoral.csv")
+    master.to_csv(os.path.join(_PROJ, "data/master_electoral.csv"))
     print("✓ Données exportées : data/master_electoral.csv")

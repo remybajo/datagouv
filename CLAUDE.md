@@ -6,9 +6,9 @@ Produit des cartes interactives et notes d'analyse par circonscription à partir
 
 ## 2. WHAT
 **Deux niveaux d'analyse, trois échelles géographiques :**
-- National : 577 circos (`build_map.py`, `build_model.py`) — progression RN + modèle bascule
+- National : 577 circos (`national/build_map.py`, `national/build_model.py`) — progression RN + modèle bascule
 - Commune : circ 9502 et extensible (`build_commune_data.py`, `build_map_commune.py`, `build_model_commune.py`)
-- Bureau de vote (BdV) : dep 95, focus circ 9502 (`build_bdv_data.py`, `build_map_bdv_9502.py`)
+- Bureau de vote (BdV) : dep 95, focus circ 9502 (`build_bdv_data.py`, `build_map_bdv.py`)
 
 **Scrutins intégrés :** Leg 2024 T1+T2 | Euro 2024 | Leg 2022 T1+T2 | Pres 2022 T1+T2 | Muni 2026
 
@@ -24,7 +24,7 @@ Produit des cartes interactives et notes d'analyse par circonscription à partir
 - `config_circos.py` : un bloc par circo (identité, carte, seuil, cibles scénarios,
   typologie BdV, références MI). `CIRCO_ACTIVE` désigne la circo traitée.
 - Ajouter une circo = copier le gabarit dans `config_circos.py`, remplir, changer
-  `CIRCO_ACTIVE`, lancer `build_bv_contours_9502.py` puis `build_map_bdv_9502.py`.
+  `CIRCO_ACTIVE`, lancer `build_bv_contours.py` puis `build_map_bdv.py`.
 - Travail analytique requis par circo : `scenario_cibles`, `bdv_type_par_commune`,
   `ref_t1_2024`, `seuil_t2` (pas juste du copier-coller).
 - Autre département : changer aussi `DEP`, régénérer `data/reu_bv_circ_<dep>.csv`.

@@ -2,12 +2,12 @@
 # Régénérables via `python3 build_bdv_data.py` et `python3 build_commune_data.py`
 data/_cache_*
 
-# Notes générées automatiquement (régénérables)
+# Notes stratégiques (confidentielles — restent en local, voir CLAUDE.md)
 analyse_*.md
 
-# Versions de sauvegarde des scripts
-build_map_bdv_9502_v*.py
-carte_bdv_9502_v*.html
+# Versions de sauvegarde locales (l'historique git suffit)
+*_v[0-9].py
+*_v[0-9].html
 
 # Python
 __pycache__/

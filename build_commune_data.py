@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """
 build_commune_data.py
@@ -9,9 +10,10 @@ Scrutins : Leg 2024 T1+T2 | Euro 2024 | Pres 2022 T1+T2 | Leg 2022 T1
 import io, os, warnings, requests
 import pandas as pd
 import numpy as np
+_PROJ = os.path.dirname(os.path.abspath(__file__))
 warnings.filterwarnings('ignore')
 
-DATA = "/Users/remybajolet/Desktop/datagouv/data"
+DATA = os.path.join(_PROJ, "data")
 API  = "https://www.data.gouv.fr/api/1"
 DEP  = "95"
 

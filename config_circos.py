@@ -20,9 +20,11 @@ CHAMPS QUI DEMANDENT UN TRAVAIL ANALYTIQUE (pas juste du copier-coller) :
   - seuil_t2             : 12.5% inscrits ÷ participation T1 de la circo
 """
 
-# Chemins de base (communs à toutes les circos)
-BASE = "/Users/remybajolet/Desktop/datagouv"
-DATA = BASE + "/data"
+# Chemins de base (dynamiques : relatifs à l'emplacement de ce fichier).
+# Le projet peut être déplacé n'importe où sans rien casser.
+import os as _os
+BASE = _os.path.dirname(_os.path.abspath(__file__))
+DATA = _os.path.join(BASE, "data")
 
 # Circo traitée par défaut quand on lance les scripts sans argument
 CIRCO_ACTIVE = "9502"

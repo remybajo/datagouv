@@ -1,10 +1,12 @@
+import os
 #!/usr/bin/env python3
 """Carte simple : contours communes + points BdV — circ 9502."""
 import json, requests
 import pandas as pd
 import folium
+_PROJ = os.path.dirname(os.path.abspath(__file__))
 
-DATA = "/Users/remybajolet/Desktop/datagouv/data"
+DATA = os.path.join(_PROJ, "data")
 CODES = ['95026','95042','95056','95127','95218','95313','95353',
          '95392','95394','95430','95445','95450','95456','95480',
          '95504','95566','95572','95594','95652','95660','95678']
@@ -134,6 +136,6 @@ for _, row in df.iterrows():
 layer_bdv.add_to(m)
 folium.LayerControl(collapsed=False).add_to(m)
 
-out = "/Users/remybajolet/Desktop/datagouv/carte_simple_9502.html"
+out = os.path.join(_PROJ, "carte_simple_9502.html")
 m.save(out)
 print(f"✓ Carte → {out}")

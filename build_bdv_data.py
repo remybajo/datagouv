@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 warnings.filterwarnings('ignore')
 
-DATA = "/Users/remybajolet/Desktop/datagouv/data"
+DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DEP  = "95"
 
 # ─── URLs sources bureau de vote ──────────────────────────────────────────────

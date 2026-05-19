@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """
 build_map_commune.py
@@ -10,10 +11,11 @@ import numpy as np
 import folium
 from folium import GeoJson, GeoJsonTooltip, GeoJsonPopup
 from folium.plugins import GroupedLayerControl
+_PROJ = os.path.dirname(os.path.abspath(__file__))
 
 warnings.filterwarnings('ignore')
-DATA    = "/Users/remybajolet/Desktop/datagouv/data"
-OUT     = "/Users/remybajolet/Desktop/datagouv/carte_commune_9502.html"
+DATA    = os.path.join(_PROJ, "data")
+OUT     = os.path.join(_PROJ, "carte_commune_9502.html")
 GEO_API = "https://geo.api.gouv.fr"
 
 # ─── Chargement des projections ───────────────────────────────────────────────

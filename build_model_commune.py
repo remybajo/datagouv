@@ -6,9 +6,10 @@ Analyse prédictive — 2ème circ Val-d'Oise (9502) — 3 scénarios pour 2027
 import os, warnings
 import pandas as pd
 import numpy as np
+_PROJ = os.path.dirname(os.path.abspath(__file__))
 
 warnings.filterwarnings('ignore')
-DATA = "/Users/remybajolet/Desktop/datagouv/data"
+DATA = os.path.join(_PROJ, "data")
 
 # ─── Valeurs de référence cirlg officielles (non corrigées par notre CSV) ────
 # Source : leg2024_t1_cirlg.csv + leg2024_t2_cirlg.csv

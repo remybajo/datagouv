@@ -1,3 +1,4 @@
+import os
 #!/usr/bin/env python3
 """
 Carte interactive : dynamiques électorales de l'extrême droite en France
@@ -11,9 +12,10 @@ import numpy as np
 import folium
 from folium.plugins import MarkerCluster
 import warnings
+_PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 warnings.filterwarnings('ignore')
 
-DATA = "/Users/remybajolet/Desktop/datagouv/data"
+DATA = os.path.join(_PROJ, "data")
 
 # ─── Color scales ─────────────────────────────────────────────────────────────
 
@@ -435,7 +437,7 @@ def build_map():
 
     folium.LayerControl(collapsed=False, position='topright').add_to(m)
 
-    out = "/Users/remybajolet/Desktop/datagouv/carte_electorale.html"
+    out = os.path.join(_PROJ, "carte_electorale.html")
     m.save(out)
 
     # Print summary stats
